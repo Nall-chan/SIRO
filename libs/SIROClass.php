@@ -22,7 +22,7 @@ namespace SIRO;
      const UPDATE_MODE = 'C';
      const REBOOT = 'R';
      const DEVICE = 'D';
-     public static function ToString( string $Command)
+     public static function ToString(string $Command)
      {
          switch ($Command) {
             case self::ADDRESS:
@@ -114,6 +114,8 @@ class DeviceCommand
     public static function ToString(string $Command)
     {
         switch ($Command) {
+            case self::VERSION:
+                return 'VERSION';
             case self::OPEN:
                 return 'OPEN';
             case self::STOP:
@@ -122,6 +124,8 @@ class DeviceCommand
                 return 'CLOSE';
             case self::LIFT:
                 return 'LIFT';
+            case self::TILT:
+                return 'TILT';
             case self::THIRD_POSITION:
                 return 'THIRD_POSITION';
             case self::QUERY:
@@ -246,7 +250,7 @@ trait ErrorHandler
     protected function ModulErrorHandler($errno, $errstr)
     {
         $this->SendDebug('ERROR', utf8_decode($errstr), 0);
-        echo $errstr."\r\n";
+        echo $errstr . "\r\n";
     }
 }
 trait DebugHelper
@@ -255,19 +259,15 @@ trait DebugHelper
     {
         if (is_a($Data, '\\SIRO\\BridgeFrame')) {
             /* @var $Data \SIRO\BridgeFrame */
-            $this->SendDebug($Message . ':Command', \SIRO\BridgeCommand::ToString($Data->Command), 0);
             $this->SendDebug($Message . ':Address', $Data->Address, 0);
-            if ($Data->Data == '') {
-                $this->SendDebug($Message . ':Data', $Data->Data, $Format);
-            }
+            $this->SendDebug($Message . ':Command', \SIRO\BridgeCommand::ToString($Data->Command), 0);
+            $this->SendDebug($Message . ':Data', $Data->Data, $Format);
         } elseif (is_a($Data, '\\SIRO\\DeviceFrame')) {
             /* @var $Data \SIRO\DeviceFrame */
-            $this->SendDebug($Message . ':Command', \SIRO\DeviceCommand::ToString($Data->Command), 0);
             $this->SendDebug($Message . ':Address', $Data->Address, 0);
-            if ($Data->Data == '') {
-                $this->SendDebug($Message . ':Data', $Data->Data, $Format);
-            }
-        } else if (is_array($Data)) {
+            $this->SendDebug($Message . ':Command', \SIRO\DeviceCommand::ToString($Data->Command), 0);
+            $this->SendDebug($Message . ':Data', $Data->Data, $Format);
+        } elseif (is_array($Data)) {
             if (count($Data) == 0) {
                 $this->SendDebug($Message, '[EMPTY]', 0);
             } elseif (count($Data) > 25) {

@@ -299,6 +299,7 @@ class SIROSplitter extends IPSModule
     {
         $SiroFrame = new \SIRO\BridgeFrame($Command, $this->BridgeAddress, $Data);
         $Result = null;
+        $this->SendDebug('Send', $SiroFrame, 0);
         try {
             if (!$this->lock('SendAPIData')) {
                 throw new Exception($this->Translate('Send is blocked for: ') . \SIRO\BridgeCommand::ToString($SiroFrame->Command), E_USER_ERROR);

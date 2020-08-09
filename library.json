@@ -1,0 +1,12 @@
+{
+    "id": "{14ED942E-E6DD-58D7-BD73-91988AE8795A}",
+    "name": "SIRO Smart Rollos",
+    "author": "Michael Tröger",
+    "url": "https://github.com/Nall-chan/SIRO",
+    "compatibility": {
+        "version": "5.4"
+    },
+    "version": "0.1",
+    "build": 1,
+    "date": 1596983123
+}

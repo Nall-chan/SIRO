@@ -1,0 +1,14 @@
+{
+    "translations": {
+        "de": {
+            "Connected": "Verbunden",
+            "Interface closed": "Schnittstelle geschlossen",
+            "Bridge not found": "Bridge nicht gefunden",
+            "Connection lost": "Verbindung verloren",
+            "Firmware": "Firmware",
+            "Send is blocked for: ": "Senden ist blockiert für: ",
+            "IO not connected": "IO nicht verbunden",
+            "Timeout": "Zeitüberschreitung"
+        }
+    }
+}

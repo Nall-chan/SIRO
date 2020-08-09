@@ -1,0 +1,17 @@
+{
+    "translations": {
+        "de": {
+            "Roller blind address (3 digits):": "Rollo Adresse (3 Ziffern):",
+            "Address": "Adresse",
+            "Configuration valid": "Konfiguration gültig",
+            "No configuration": "Keine Konfiguration",
+            "Control": "Steuerung",
+            "Level": "Höhe",
+            "Tilt": "Neigung",
+            "Invalid value": "Ungültiger Wert",
+            "Invalid ident": "Ungültiger Ident",
+            "Wrong event received.": "Falsches Ereignis empfangen.",
+            "Instance has no active parent.": "Instanz hat keine aktive übergeordnete Instanz."
+        }
+    }
+}

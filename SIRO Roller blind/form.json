@@ -1,0 +1,36 @@
+{
+    "elements": [
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "Label",
+                    "caption": "Roller blind address (3 digits):"
+                },
+                {
+                    "type": "ValidationTextBox",
+                    "name": "Address",
+                    "caption": "Address",
+                    "validate": "^\\d{3}$"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "type": "TestCenter"
+        }
+    ],
+    "status": [
+        {
+            "code": 102,
+            "icon": "active",
+            "caption": "Configuration valid"
+        },
+        {
+            "code": 104,
+            "icon": "inactive",
+            "caption": "No configuration"
+        }
+    ]
+}

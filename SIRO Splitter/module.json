@@ -1,0 +1,19 @@
+{
+    "id": "{BC63861A-BEA5-9F77-FC6D-977665E8D839}",
+    "name": "SIRO Splitter",
+    "type": 2,
+    "vendor": "SIRO",
+    "aliases": [],
+    "parentRequirements": [
+        "{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}"
+    ],
+    "childRequirements": [
+        "{656600E1-FC88-50CD-EBEC-6B8A9BA157FA}"
+    ],
+    "implemented": [
+        "{5138E7A2-ECEE-ED0E-2DFF-759D556AD9CB}",
+        "{018EF6B5-AB94-40C6-AA53-46943E824ACF}"
+    ],
+    "prefix": "SIRO",
+    "url": "https://github.com/Nall-chan/SIRO/blob/beta/SIRO%20Splitter/"
+}

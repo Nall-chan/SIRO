@@ -1,0 +1,16 @@
+{
+    "id": "{742F943E-F3E2-0E3E-8F3D-9ACDDC379D26}",
+    "name": "SIRO Roller blind",
+    "type": 3,
+    "vendor": "SIRO",
+    "aliases": [],
+    "parentRequirements": [
+        "{5138E7A2-ECEE-ED0E-2DFF-759D556AD9CB}"
+    ],
+    "childRequirements": [],
+    "implemented": [
+        "{656600E1-FC88-50CD-EBEC-6B8A9BA157FA}"
+    ],
+    "prefix": "SIRO",
+    "url": "https://github.com/Nall-chan/SIRO/blob/beta/SIRO%20Roller%20blind/"
+}

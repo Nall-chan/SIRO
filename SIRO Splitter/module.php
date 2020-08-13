@@ -20,7 +20,7 @@ eval('declare(strict_types=1);namespace SIROSplitter {?>' . file_get_contents(__
 eval('declare(strict_types=1);namespace SIROSplitter {?>' . file_get_contents(__DIR__ . '/../libs/helper/VariableHelper.php') . '}');
 
 /**
- * SIROSplitter ist die Klasse für das SIRO RS485 Interface
+ * SIROSplitter ist die Klasse für die SIRO Rollos
  * Erweitert ipsmodule.
  *
  * @property string $ReceiveBuffer Receive Buffer.
@@ -130,6 +130,7 @@ class SIROSplitter extends IPSModule
             $Data->DeviceAddress,
             $Data->Data
         );
+        $this->SendDebug('Forward Device',$DeviceFrame,0);
         $ResultData = $this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame());
         if ($ResultData == null) {
             return serialize(null);
@@ -169,8 +170,9 @@ class SIROSplitter extends IPSModule
                 }
                 continue;
             }
-            if ($SiroFrame != \SIRO\BridgeCommand::DEVICE) {
+            if ($SiroFrame->Command != \SIRO\BridgeCommand::DEVICE) {
                 $this->SendDebug('Wrong Command', $SiroFrame, 0);
+                continue;
             }
             $DeviceFrame = new \SIRO\DeviceFrame($SiroFrame->Data);
             $this->SendDebug('Event', $DeviceFrame, 0);
@@ -264,7 +266,7 @@ class SIROSplitter extends IPSModule
         return $Successful;
     }
     /**
-     * Wartet auf eine Antwort einer Anfrage an den LMS.
+     * Wartet auf eine Antwort einer Anfrage an die Bridge.
      *
      */
     private function ReadResponseFrame()
@@ -277,6 +279,8 @@ class SIROSplitter extends IPSModule
             }
             usleep(1000);
         }
+        $this->ResponseFrame = null;
+        $this->WaitForResponse = false;
         return null;
     }
     /**
@@ -289,6 +293,7 @@ class SIROSplitter extends IPSModule
             $Buffer = $this->ResponseFrame;
             if (is_null($Buffer)) {
                 $this->ResponseFrame = $ResponseFrame;
+                $this->WaitForResponse = false;
                 return true;
             }
             usleep(1000);
@@ -316,15 +321,14 @@ class SIROSplitter extends IPSModule
                 throw new Exception($this->Translate('Timeout'), E_USER_NOTICE);
             }
             $this->SendDebug('Response', $ResponseFrame, 0);
-            $this->WaitForResponse = false;
             $this->unlock('SendAPIData');
             $Result = $ResponseFrame;
         } catch (Exception $exc) {
-            $this->SendDebug('Error', $exc->getMessage(), 0);
+           // $this->SendDebug('Error', $exc->getMessage(), 0);
             if ($exc->getCode() != E_USER_ERROR) {
-                $this->WaitForResponse = false;
                 $this->unlock('SendAPIData');
             }
+            $this->WaitForResponse = false;
             set_error_handler([$this, 'ModulErrorHandler']);
             trigger_error($exc->getMessage(), E_USER_NOTICE);
             restore_error_handler();

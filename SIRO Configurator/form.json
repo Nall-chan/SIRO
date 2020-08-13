@@ -1,0 +1,46 @@
+{
+    "actions": [
+        {
+            "type": "Configurator",
+            "name": "Configurator",
+            "caption": "",
+            "delete": true,
+            "sort": {
+                "column": "Address",
+                "direction": "ascending"
+            },
+            "columns": [
+                {
+                    "caption": "Address",
+                    "name": "Address",
+                    "width": "120px"
+                },
+                {
+                    "caption": "Name",
+                    "name": "Name",
+                    "width": "300px"
+                },
+                {
+                    "caption": "Location",
+                    "name": "Location",
+                    "width": "auto"
+                }
+            ],
+            "values": []
+        },
+        {
+            "type": "PopupAlert",
+            "name": "AlertPopup",
+            "visible": false,
+            "popup": {
+                "items": [
+                    {
+                        "name": "AlertText",
+                        "type": "Label",
+                        "caption": ""
+                    }
+                ]
+            }
+        }
+    ]
+}

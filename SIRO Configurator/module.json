@@ -1,0 +1,16 @@
+{
+    "id": "{6C11D868-D4A8-501D-ED21-676F59B4A740}",
+    "name": "SIRO Configurator",
+    "type": 4,
+    "vendor": "SIRO",
+    "aliases": [],
+    "parentRequirements": [
+        "{5138E7A2-ECEE-ED0E-2DFF-759D556AD9CB}"
+    ],
+    "childRequirements": [],
+    "implemented": [
+        "{656600E1-FC88-50CD-EBEC-6B8A9BA157FA}"
+    ],
+    "prefix": "SIRO",
+    "url": "https://github.com/Nall-chan/SIRO/blob/beta/SIRO%20Configurator/"
+}

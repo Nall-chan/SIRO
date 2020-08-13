@@ -65,7 +65,9 @@ class SIRORollerblind extends IPSModule
             $this->SetReceiveDataFilter('.*NOTING.*');
             return;
         }
-        $this->SetReceiveDataFilter('.*"DeviceAddress":"' . $Address . '".*');
+        $Filter = '.*"DeviceAddress":"' . $Address . '".*';
+        $this->SetReceiveDataFilter($Filter);
+        $this->SendDebug('Filter', $Filter, 0);
         if ($this->HasActiveParent()) {
             $this->RequestState();
         }
@@ -211,47 +213,15 @@ class SIRORollerblind extends IPSModule
 
     private function DecodeEvent(\SIRO\DeviceFrame $DeviceFrame)
     {
-        /*
-RECEIVED | !123D001r59b180;
-RECEIVED | !123D001r44b0;
-RECEIVED | !123D001r64b180;
-RECEIVED | !123D001r85b180;
-RECEIVED | !123D001r72b0;
-         */
         if ($DeviceFrame->Command != \SIRO\DeviceCommand::REPORT_STATE) {
             set_error_handler([$this, 'ModulErrorHandler']);
             trigger_error('Wrong event received.', E_USER_NOTICE);
             restore_error_handler();
         }
         $Part = explode('b', $DeviceFrame->Data);
-        $Level = (int) substr($Part[0], 1);
+        $Level = (int) $Part[0];
         $Tilt = (int) $Part[1];
         $this->SetValueInteger('LEVEL', $Level);
         $this->SetValueInteger('TILT', $Tilt);
     }
-    /*
-    Nall-chanheute um 22:02 Uhr
-In der Doku gibt es auch das Commando:
-!123D001b070;
-Da ist keine Höhe bei, nur das b auf 70. Scheint also auch zwischenschritte zu geben
-dzvoheute um 22:03 Uhr
-bestimmt für Raff Rollos oder Lammelen ?
-TXT: 08.08.2020, 22:02:36 |             TRANSMIT | !123D001b070;
-HEX: 08.08.2020, 22:02:36 |             TRANSMIT | 21 31 32 33 44 30 30 31 62 30 37 30 3B
-TXT: 08.08.2020, 22:02:37 |             RECEIVED | !123D001b070;
-HEX: 08.08.2020, 22:02:37 |             RECEIVED | 21 31 32 33 44 30 30 31 62 30 37 30 3B
-TXT: 08.08.2020, 22:02:37 |             RECEIVED | !123D001r95b138;
-HEX: 08.08.2020, 22:02:37 |             RECEIVED | 21 31 32 33 44 30 30 31 72 39 35 62 31 33 38 3B
-TXT: 08.08.2020, 22:02:38 |             RECEIVED | !123D001r94b70;
-HEX: 08.08.2020, 22:02:38 |             RECEIVED | 21 31 32 33 44 30 30 31 72 39 34 62 37 30 3B
-Nall-chanheute um 22:04 Uhr
-Vermute ich auch, aber ich habe bisher nur normale rollos auf der Website gesehen.
-Ich habe aber erstmal genug Daten. Ich baue morgen das Device und mit Glück kannst du morgen zumindest etwas ausprobieren.
-dzvoheute um 22:04 Uhr
-Cool - danke, melde dich gerne wenn Du was brauchst ...
-Nall-chanheute um 22:04 Uhr
-Ja, das wird das sein, mit den Lammellen
-1% weniger, weil er gedreht hat.
-Dann ist ja 0 geöffnet und 100 geschlossen. ^_^
-     */
 }

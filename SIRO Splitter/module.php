@@ -119,7 +119,7 @@ class SIROSplitter extends IPSModule
             $Config['DataBits'] = '8';
             return json_encode($Config);
         } else { // Kein SerialPort, sondern TCP oder XBEE Brücke. User muss selber den Port am Endgerät einstellen.
-            return ''; //json_encode([]);
+            return '';
         }
     }
     public function ForwardData($JSONString)
@@ -130,7 +130,7 @@ class SIROSplitter extends IPSModule
             $Data->DeviceAddress,
             $Data->Data
         );
-        $this->SendDebug('Forward Device',$DeviceFrame,0);
+        $this->SendDebug('Forward Device', $DeviceFrame, 0);
         $ResultData = $this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame());
         if ($ResultData == null) {
             return serialize(null);
@@ -185,40 +185,14 @@ class SIROSplitter extends IPSModule
      */
     protected function KernelReady()
     {
-        $this->RegisterParent();
-        if ($this->HasActiveParent()) {
-            $this->IOChangeState(IS_ACTIVE);
-        } else {
-            $this->IOChangeState(IS_INACTIVE);
-        }
-    }
-
-    /*    protected function RegisterParent()
-        {
-            $IOId = $this->IORegisterParent();
-            // Anzeige Port in der INFO Spalte
-            if ($IOId > 0) {
-                $ParentInstance = IPS_GetInstance($IOId);
-                if ($ParentInstance['ModuleInfo']['ModuleID'] == '{6DC3D946-0D31-450F-A8C6-C42DB8D7D4F1}') {
-                    $this->SetSummary(IPS_GetProperty($IOId, 'Port'));
-                } else {
-                    $config = json_decode(IPS_GetConfiguration($IOId), true);
-                    if (array_key_exists('Port', $config)) {
-                        $this->SetSummary($config['Port']);
-                    } elseif (array_key_exists('Host', $config)) {
-                        $this->SetSummary($config['Host']);
-                    } elseif (array_key_exists('Address', $config)) {
-                        $this->SetSummary($config['Address']);
-                    } elseif (array_key_exists('Name', $config)) {
-                        $this->SetSummary($config['Name']);
-                    }
-                    $this->SetSummary('see ' . $IOId);
-                }
-            } else {
-                $this->SetSummary('(none)');
+        if ($this->RegisterParent() > 0) {
+            if ($this->HasActiveParent()) {
+                $this->IOChangeState(IS_ACTIVE);
+                return;
             }
         }
-     */
+        $this->IOChangeState(IS_INACTIVE);
+    }
     /**
      * Wird ausgeführt wenn sich der Status vom Parent ändert.
      */
@@ -324,7 +298,6 @@ class SIROSplitter extends IPSModule
             $this->unlock('SendAPIData');
             $Result = $ResponseFrame;
         } catch (Exception $exc) {
-           // $this->SendDebug('Error', $exc->getMessage(), 0);
             if ($exc->getCode() != E_USER_ERROR) {
                 $this->unlock('SendAPIData');
             }

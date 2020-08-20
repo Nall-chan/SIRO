@@ -302,6 +302,7 @@ class SIROSplitter extends IPSModule
                 $this->unlock('SendAPIData');
             }
             $this->WaitForResponse = false;
+            $this->SendDebug('ERROR',$exc->getMessage(), 0);
             set_error_handler([$this, 'ModulErrorHandler']);
             trigger_error($exc->getMessage(), E_USER_NOTICE);
             restore_error_handler();

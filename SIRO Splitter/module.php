@@ -24,9 +24,10 @@ eval('declare(strict_types=1);namespace SIROSplitter {?>' . file_get_contents(__
  * Erweitert ipsmodule.
  *
  * @property string $ReceiveBuffer Receive Buffer.
+ * @property array $ReplyDeviceFrames Enthält die versendeten DeviceFrame und speichert die Antworten.
  * @property string $BridgeAddress
  * @property \SIRO\BridgeFrame $ResponseFrame
- * @property bool $WaitForResponse
+ * @property bool $WaitForBridgeResponse
  * @property int $ParentID Aktueller IO-Parent.
  */
 class SIROSplitter extends IPSModule
@@ -42,29 +43,30 @@ class SIROSplitter extends IPSModule
 }
     public function Create()
     {
-        //Never delete this line!
         parent::Create();
         $this->ReceiveBuffer = '';
-        $this->WaitForResponse = false;
+        $this->WaitForBridgeResponse = false;
         $this->BridgeAddress = '000';
+        $this->ReplyDeviceFrames=[];
         $this->RequireParent('{6DC3D946-0D31-450F-A8C6-C42DB8D7D4F1}');
+        if (IPS_GetKernelRunlevel() != KR_READY) {
+            $this->RegisterMessage(0, IPS_KERNELSTARTED);
+        }
     }
 
     public function Destroy()
     {
-        //Never delete this line!
         parent::Destroy();
     }
 
     public function ApplyChanges()
     {
-        //Never delete this line!
         parent::ApplyChanges();
         $this->ReceiveBuffer = '';
-        $this->WaitForResponse = false;
+        $this->WaitForBridgeResponse = false;
         $this->BridgeAddress = '000';
+        $this->ReplyDeviceFrames=[];
         $this->SetSummary('000');
-        $this->RegisterMessage(0, IPS_KERNELSTARTED);
         $this->RegisterMessage($this->InstanceID, FM_CONNECT);
         $this->RegisterMessage($this->InstanceID, FM_DISCONNECT);
 
@@ -95,6 +97,7 @@ class SIROSplitter extends IPSModule
         $this->IOMessageSink($TimeStamp, $SenderID, $Message, $Data);
         switch ($Message) {
             case IPS_KERNELSTARTED:
+                $this->UnregisterMessage(0, IPS_KERNELSTARTED);
                 $this->KernelReady();
                 break;
         }
@@ -128,14 +131,23 @@ class SIROSplitter extends IPSModule
         $DeviceFrame = new \SIRO\DeviceFrame(
             $Data->DeviceCommand,
             $Data->DeviceAddress,
-            $Data->Data
+            $Data->Data,
+            $Data->needResponse
         );
-        $this->SendDebug('Forward Device', $DeviceFrame, 0);
-        $ResultData = $this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame());
-        if ($ResultData == null) {
-            return serialize(null);
+        if ($Data->needResponse) {
+            $this->SendQueuePush($DeviceFrame);
+            $SendOk = $this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame());
+            $ResultData = $this->WaitForResponse($DeviceFrame);
+            $this->SendDebug('Result Forward Device', $ResultData, 0);
+            if ($ResultData === false) {
+                trigger_error($this->Translate('No answer from Device'), E_USER_NOTICE);
+                return false;
+            }
+            return serialize($ResultData);
+        } else {
+            $Result = $this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame());
         }
-        return serialize(new \SIRO\DeviceFrame($ResultData->Data));
+        return serialize($Result);
     }
 
     public function ReceiveData($JSONString)
@@ -164,20 +176,22 @@ class SIROSplitter extends IPSModule
         foreach ($Packets as $Packet) {
             $SiroFrame = new \SIRO\BridgeFrame($Packet);
             $this->SendDebug('Receive', $SiroFrame, 0);
-            if ($this->WaitForResponse) {
-                if (!$this->WriteResponseFrame($SiroFrame)) {
-                    $this->SendDebug('ERROR', 'ResponseFrame is not empty', 0);
+
+            if ($SiroFrame->Command == \SIRO\BridgeCommand::DEVICE) {
+                $DeviceFrame = new \SIRO\DeviceFrame($SiroFrame->Data);
+                if (!$this->SendQueueUpdate($DeviceFrame)) {
+                    $this->SendDebug('Event', $DeviceFrame, 0);
+                    $ChildrenData = $DeviceFrame->ToJSONStringForDevice();
+                    $this->SendDataToChildren($ChildrenData);
                 }
-                continue;
+            } else {
+                if ($this->WaitForBridgeResponse) {
+                    if (!$this->WriteResponseFrame($SiroFrame)) {
+                        $this->SendDebug('ERROR', 'ResponseFrame is not empty', 0);
+                    }
+                    continue;
+                }
             }
-            if ($SiroFrame->Command != \SIRO\BridgeCommand::DEVICE) {
-                $this->SendDebug('Wrong Command', $SiroFrame, 0);
-                continue;
-            }
-            $DeviceFrame = new \SIRO\DeviceFrame($SiroFrame->Data);
-            $this->SendDebug('Event', $DeviceFrame, 0);
-            $ChildrenData = $DeviceFrame->ToJSONStringForDevice();
-            $this->SendDataToChildren($ChildrenData);
         }
     }
     /**
@@ -254,11 +268,11 @@ class SIROSplitter extends IPSModule
             usleep(1000);
         }
         $this->ResponseFrame = null;
-        $this->WaitForResponse = false;
+        $this->WaitForBridgeResponse = false;
         return null;
     }
     /**
-     * Wartet auf eine Antwort einer Anfrage an den LMS.
+     * Wartet auf eine Antwort einer Anfrage an die Bridge.
      *
      */
     private function WriteResponseFrame($ResponseFrame)
@@ -267,12 +281,99 @@ class SIROSplitter extends IPSModule
             $Buffer = $this->ResponseFrame;
             if (is_null($Buffer)) {
                 $this->ResponseFrame = $ResponseFrame;
-                $this->WaitForResponse = false;
+                $this->WaitForBridgeResponse = false;
                 return true;
             }
             usleep(1000);
         }
         return false;
+    }
+
+    //################# SENDQUEUE Devices
+
+    /**
+     * Fügt eine Anfrage in die SendQueue ein.
+     *
+     * @param \SIRO\DeviceFrame $DeviceFrame Das versendete DeviceFrame Objekt.
+     */
+    private function SendQueuePush(\SIRO\DeviceFrame $DeviceFrame)
+    {
+        if (!$this->lock('ReplyDeviceFrames')) {
+            //throw new Exception($this->Translate('ReplyDeviceFrames is locked'), E_USER_NOTICE);
+            return false;
+        }
+        $data = $this->ReplyDeviceFrames;
+        if (array_key_exists($DeviceFrame->Address, $data)) {
+            $this->unlock('ReplyDeviceFrames');
+            return false;
+        }
+        $data[$DeviceFrame->Address] = null;
+        $this->ReplyDeviceFrames = $data;
+        $this->unlock('ReplyDeviceFrames');
+        return true;
+    }
+    
+    /**
+     * Fügt eine Antwort in die SendQueue ein.
+     *
+     * @param \SIRO\DeviceFrame $DeviceFrame Das empfangene DeviceFrame Objekt.
+     *
+     * @return bool True wenn Anfrage zur Antwort gefunden wurde, sonst false.
+     */
+    private function SendQueueUpdate(\SIRO\DeviceFrame $DeviceFrame)
+    {
+        if (!$this->lock('ReplyDeviceFrames')) {
+            // throw new Exception($this->Translate('ReplyDeviceFrames is locked'), E_USER_NOTICE);
+            return false;
+        }
+        $key = $DeviceFrame->Address;
+        $data = $this->ReplyDeviceFrames;
+        if (array_key_exists($key, $data)) {
+            $data[$key] = $DeviceFrame;
+            $this->ReplyDeviceFrames = $data;
+            $this->unlock('ReplyDeviceFrames');
+            return true;
+        }
+        $this->unlock('ReplyDeviceFrames');
+        return false;
+    }
+    /**
+     * Wartet auf eine Antwort einer Anfrage an die Bridge LMS.
+     *
+     * @param \SIRO\DeviceFrame $DeviceFrame Das Objekt welches an die Bridge versendet wurde.
+     * @result array|boolean Enthält ein Array mit den Daten der Antwort. False bei einem Timeout
+     */
+    private function WaitForResponse(\SIRO\DeviceFrame $DeviceFrame)
+    {
+        $SearchPatter = $DeviceFrame->Address;
+        for ($i = 0; $i < 1000; $i++) {
+            $Buffer = $this->ReplyDeviceFrames;
+            if (!array_key_exists($SearchPatter, $Buffer)) {
+                return false;
+            }
+            if ($Buffer[$SearchPatter] !== null) {
+                $this->SendQueueRemove($SearchPatter);
+                return $Buffer[$SearchPatter];
+            }
+            IPS_Sleep(5);
+        }
+        $this->SendQueueRemove($SearchPatter);
+        return false;
+    }
+    /**
+     * Löscht einen Eintrag aus der SendQueue.
+     *
+     * @param int $Index Der Index des zu löschenden Eintrags.
+     */
+    private function SendQueueRemove(string $Index)
+    {
+        if (!$this->lock('ReplyDeviceFrames')) {
+            throw new Exception($this->Translate('ReplyDeviceFrames is locked'), E_USER_NOTICE);
+        }
+        $data = $this->ReplyDeviceFrames;
+        unset($data[$Index]);
+        $this->ReplyDeviceFrames = $data;
+        $this->unlock('ReplyDeviceFrames');
     }
     private function SendData(string $Command, string $Data, bool $SetState = false)
     {
@@ -280,15 +381,18 @@ class SIROSplitter extends IPSModule
         $Result = null;
         $this->SendDebug('Send', $SiroFrame, 0);
         try {
-            if (!$this->lock('SendAPIData')) {
-                throw new Exception($this->Translate('Send is blocked for: ') . \SIRO\BridgeCommand::ToString($SiroFrame->Command), E_USER_ERROR);
-            }
             if (!$this->HasActiveParent()) {
                 throw new Exception($this->Translate('IO not connected'), E_USER_NOTICE);
             }
             $Data = $SiroFrame->ToJSONStringForIO();
+            if ($Command == \SIRO\BridgeCommand::DEVICE) {
+                return parent::SendDataToParent($Data);
+            }
+            if (!$this->lock('SendAPIData')) {
+                throw new Exception($this->Translate('Send is blocked for'), E_USER_ERROR);
+            }
             $this->ResponseFrame = null;
-            $this->WaitForResponse = true;
+            $this->WaitForBridgeResponse = true;
             parent::SendDataToParent($Data);
             $ResponseFrame = $this->ReadResponseFrame();
             if ($ResponseFrame === null) {
@@ -301,7 +405,7 @@ class SIROSplitter extends IPSModule
             if ($exc->getCode() != E_USER_ERROR) {
                 $this->unlock('SendAPIData');
             }
-            $this->WaitForResponse = false;
+            $this->WaitForBridgeResponse = false;
             $this->SendDebug('ERROR', $exc->getMessage(), 0);
             set_error_handler([$this, 'ModulErrorHandler']);
             trigger_error($exc->getMessage(), E_USER_NOTICE);

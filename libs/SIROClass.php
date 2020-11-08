@@ -207,16 +207,26 @@ class DeviceFrame
      * @var string
      */
     public $Data;
-    public function __construct($Command, $Address = '', $Data = '')
+
+    /**
+     * Flag ob auf Antwort gewartet werden muss.
+     *
+     * @var bool
+     */
+    public $needResponse;
+
+    public function __construct($Command, $Address = '', $Data = '', $needResponse = true)
     {
         if (strlen($Command) == 1) {
             $this->Command = $Command;
             $this->Address = $Address;
             $this->Data = $Data;
+            $this->needResponse = $needResponse;
         } else {
             $this->Address = substr($Command, 0, 3);
             $this->Command = $Command[3];
             $this->Data = substr($Command, 4);
+            $this->needResponse = false;
         }
     }
     public function ToJSONStringForSplitter()
@@ -235,6 +245,7 @@ class DeviceFrame
         $Frame .= $this->Data;
         return $Frame;
     }
+
     private function ToJSON(string $GUID)
     {
         $SendData = new \stdClass();
@@ -242,6 +253,7 @@ class DeviceFrame
         $SendData->DeviceCommand = $this->Command;
         $SendData->DeviceAddress = $this->Address;
         $SendData->Data = $this->Data;
+        $SendData->needResponse=$this->needResponse;
         return json_encode($SendData);
     }
 }
@@ -259,14 +271,15 @@ trait DebugHelper
     {
         if (is_a($Data, '\\SIRO\\BridgeFrame')) {
             /* @var $Data \SIRO\BridgeFrame */
-            $this->SendDebug($Message . ':Address', $Data->Address, 0);
-            $this->SendDebug($Message . ':Command', \SIRO\BridgeCommand::ToString($Data->Command), 0);
-            $this->SendDebug($Message . ':Data', $Data->Data, $Format);
+            $this->SendDebug($Message . ':Bridge:Address', $Data->Address, 0);
+            $this->SendDebug($Message . ':Bridge:Command', \SIRO\BridgeCommand::ToString($Data->Command), 0);
+            $this->SendDebug($Message . ':Bridge:Data', $Data->Data, $Format);
         } elseif (is_a($Data, '\\SIRO\\DeviceFrame')) {
             /* @var $Data \SIRO\DeviceFrame */
-            $this->SendDebug($Message . ':Address', $Data->Address, 0);
-            $this->SendDebug($Message . ':Command', \SIRO\DeviceCommand::ToString($Data->Command), 0);
-            $this->SendDebug($Message . ':Data', $Data->Data, $Format);
+            $this->SendDebug($Message . ':Device:Address', $Data->Address, 0);
+            $this->SendDebug($Message . ':Device:Command', \SIRO\DeviceCommand::ToString($Data->Command), 0);
+            $this->SendDebug($Message . ':Device:needResponse', $Data->needResponse, 0);
+            $this->SendDebug($Message . ':Device:Data', $Data->Data, $Format);
         } elseif (is_array($Data)) {
             if (count($Data) == 0) {
                 $this->SendDebug($Message, '[EMPTY]', 0);

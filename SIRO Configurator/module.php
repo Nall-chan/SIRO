@@ -28,7 +28,6 @@ class SIROConfigurator extends IPSModule
 
     public function Create()
     {
-        //Never delete this line!
         parent::Create();
         $this->Devices = [];
         $this->SearchFinished = true;
@@ -37,16 +36,15 @@ class SIROConfigurator extends IPSModule
 
     public function Destroy()
     {
-        //Never delete this line!
         parent::Destroy();
     }
 
     public function ApplyChanges()
     {
-        //Never delete this line!
         parent::ApplyChanges();
         $this->SetReceiveDataFilter('.*"DeviceCommand":"' . \SIRO\DeviceCommand::VERSION . '".*');
     }
+
     public function GetConfigurationForm()
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
@@ -62,6 +60,7 @@ class SIROConfigurator extends IPSModule
         $this->SendDebug('FORM', json_last_error_msg(), 0);
         return json_encode($Form);
     }
+
     public function ReceiveData($JSONString)
     {
         $Data = json_decode($JSONString);
@@ -148,7 +147,7 @@ class SIROConfigurator extends IPSModule
     private function GetDevicesFromBridge()
     {
         $this->SearchFinished = false;
-        $DeviceFrame = new \SIRO\DeviceFrame(\SIRO\DeviceCommand::VERSION, '000', \SIRO\DeviceCommand::QUERY);
+        $DeviceFrame = new \SIRO\DeviceFrame(\SIRO\DeviceCommand::VERSION, '000', \SIRO\DeviceCommand::QUERY, false);
         $this->SendDebug('Send', $DeviceFrame, 0);
         $this->Devices = [];
         $Devices = [];
@@ -159,16 +158,17 @@ class SIROConfigurator extends IPSModule
             return $Devices;
         }
         /**  @var \SIRO\DeviceFrame $ResultFrame	*/
-        $ResultFrame = unserialize($Result);
-        $this->SendDebug('Response', $ResultFrame, 0);
+        //$ResultFrame = unserialize($Result);
+        //$this->SendDebug('Response', $ResultFrame, 0);
         if (!$this->WaitForFinish()) {
             $this->SearchFinished = true;
             return $Devices;
         }
         $Devices = $this->Devices;
-        array_unshift($Devices, ['Address'=>$ResultFrame->Address]);
+        //array_unshift($Devices, ['Address'=>$ResultFrame->Address]);
         return $Devices;
     }
+
     private function GetNamesFromBridge(array &$Devices)
     {
         foreach ($Devices as &$Device) {
@@ -187,6 +187,7 @@ class SIROConfigurator extends IPSModule
             $Device['Name'] = $ResultFrame->Data;
         }
     }
+
     /**
      * Wartet auf den Abschluss der Suche.
      *

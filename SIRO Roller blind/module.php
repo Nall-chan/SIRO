@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @author        Michael Tröger <micha@nall-chan.net>
  * @copyright     2020 Michael Tröger
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
- * @version       0.01
+ * @version       1.11
  */
 require_once __DIR__ . '/../libs/SIROClass.php';  // diverse Klassen
 eval('declare(strict_types=1);namespace SIRORollerblind {?>' . file_get_contents(__DIR__ . '/../libs/helper/VariableProfileHelper.php') . '}');
@@ -21,14 +21,14 @@ eval('declare(strict_types=1);namespace SIRORollerblind {?>' . file_get_contents
  * @method void SetValueInteger(string $Ident, int $value)
  * @method void SetValueFloat(string $Ident, float $value)
  */
-class SIRORollerblind extends IPSModule
+class SIRORollerblind extends IPSModuleStrict
 {
     use \SIRO\DebugHelper;
     use \SIRO\ErrorHandler;
     use \SIRORollerblind\VariableProfileHelper;
     use \SIRORollerblind\VariableHelper;
 
-    public function Create()
+    public function Create(): void
     {
         //Never delete this line!
         parent::Create();
@@ -36,13 +36,13 @@ class SIRORollerblind extends IPSModule
         $this->ConnectParent('{BC63861A-BEA5-9F77-FC6D-977665E8D839}');
     }
 
-    public function Destroy()
+    public function Destroy(): void
     {
         //Never delete this line!
         parent::Destroy();
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         //Never delete this line!
         parent::ApplyChanges();
@@ -153,33 +153,38 @@ class SIRORollerblind extends IPSModule
     /**
      * @param mixed $Value
      */
-    public function RequestAction($Ident, $Value)
+    public function RequestAction(string $Ident, mixed $Value): void
     {
         switch ($Ident) {
             case 'LEVEL':
-                return $this->Move($Value);
+                $this->Move($Value);
+                return;
             case 'TILT':
-                return $this->Tilt($Value);
+                $this->Tilt($Value);
+                return;
             case 'CONTROL':
                 switch ($Value) {
                     case 0:
-                        return $this->Open();
+                        $this->Open();
+                        return;
                     case 2:
-                        return $this->Stop();
+                        $this->Stop();
+                        return;
                     case 4:
-                        return $this->Close();
-                    }
-                    set_error_handler([$this, 'ModulErrorHandler']);
-                    trigger_error($this->Translate('Invalid value'), E_USER_NOTICE);
-                    restore_error_handler();
-                return false;
+                        $this->Close();
+                        return;
+                }
+                set_error_handler([$this, 'ModulErrorHandler']);
+                trigger_error($this->Translate('Invalid value'), E_USER_NOTICE);
+                restore_error_handler();
+                return;
         }
         set_error_handler([$this, 'ModulErrorHandler']);
         trigger_error($this->Translate('Invalid ident'), E_USER_NOTICE);
         restore_error_handler();
-        return false;
+        return;
     }
-    public function ReceiveData($JSONString)
+    public function ReceiveData(string $JSONString): string
     {
         $Data = json_decode($JSONString);
         $DeviceFrame = new \SIRO\DeviceFrame(
@@ -189,8 +194,9 @@ class SIRORollerblind extends IPSModule
         );
         $this->SendDebug('Event', $DeviceFrame, 0);
         $this->DecodeEvent($DeviceFrame);
+        return '';
     }
-    private function SendData(string $Command, string $Data = '')
+    private function SendData(string $Command, string $Data = ''): ?\SIRO\DeviceFrame
     {
         $Address = $this->ReadPropertyString('Address');
         if ($Address == '000') {
@@ -222,7 +228,7 @@ class SIRORollerblind extends IPSModule
         return $ResultFrame;
     }
 
-    private function DecodeEvent(\SIRO\DeviceFrame $DeviceFrame)
+    private function DecodeEvent(\SIRO\DeviceFrame $DeviceFrame): void
     {
         switch ($DeviceFrame->Command) {
             case \SIRO\DeviceCommand::REPORT_STATE:
@@ -236,7 +242,7 @@ class SIRORollerblind extends IPSModule
         }
     }
 
-    private function RequestPowerState()
+    private function RequestPowerState(): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::POWER, 'Vc' . \SIRO\DeviceCommand::QUERY);
         if ($ResultData == null) {

@@ -15,16 +15,16 @@ namespace SIRO;
  * @example <b>Ohne</b>
  */
 
- class BridgeCommand
- {
-     const VERSION = 'V';
-     const ADDRESS = 'G';
-     const UPDATE_MODE = 'C';
-     const REBOOT = 'R';
-     const DEVICE = 'D';
-     public static function ToString(string $Command)
-     {
-         switch ($Command) {
+class BridgeCommand
+{
+    public const VERSION = 'V';
+    public const ADDRESS = 'G';
+    public const UPDATE_MODE = 'C';
+    public const REBOOT = 'R';
+    public const DEVICE = 'D';
+    public static function ToString(string $Command): string
+    {
+        switch ($Command) {
             case self::ADDRESS:
                 return 'Address';
             case self::DEVICE:
@@ -37,9 +37,9 @@ namespace SIRO;
                 return 'Version';
             default:
                 return 'unknown command';
-         }
-     }
- }
+        }
+    }
+}
 
 class BridgeFrame
 {
@@ -48,22 +48,22 @@ class BridgeFrame
      *
      * @var string
      */
-    public $Command;
+    public string $Command;
 
     /**
      * BridgeAddress als String
      * @var string
      */
-    public $Address;
+    public string $Address;
 
     /**
      * Payload als string.
      *
      * @var string
      */
-    public $Data;
+    public string $Data;
 
-    public function __construct($Command, $Address = '', $Data = '')
+    public function __construct(string $Command, string $Address = '', string $Data = '')
     {
         if ($Command[0] == '!') {
             $this->Address = substr($Command, 1, 3);
@@ -76,15 +76,15 @@ class BridgeFrame
         }
     }
 
-    public function ToJSONStringForIO()
+    public function ToJSONStringForIO(): string
     {
         $SendData = new \stdClass();
         $SendData->DataID = '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}';
-        $SendData->Buffer = utf8_encode($this->EncodeFrame());
+        $SendData->Buffer = bin2hex($this->EncodeFrame());
         return json_encode($SendData);
     }
 
-    public function EncodeFrame()
+    public function EncodeFrame(): string
     {
         //Frame  bauen.
         $Frame = '!';
@@ -98,20 +98,20 @@ class BridgeFrame
 
 class DeviceCommand
 {
-    const VERSION = 'v';
-    const OPEN = 'o';
-    const STOP = 's';
-    const CLOSE = 'c';
-    const LIFT = 'm';
-    const TILT = 'b';
-    const THIRD_POSITION = 'f';
-    const QUERY = '?';
-    const REPORT_STATE = 'r';
-    const POWER = 'p';
-    const ALIAS_NAME = 'N';
-    const ERROR = 'E';
+    public const VERSION = 'v';
+    public const OPEN = 'o';
+    public const STOP = 's';
+    public const CLOSE = 'c';
+    public const LIFT = 'm';
+    public const TILT = 'b';
+    public const THIRD_POSITION = 'f';
+    public const QUERY = '?';
+    public const REPORT_STATE = 'r';
+    public const POWER = 'p';
+    public const ALIAS_NAME = 'N';
+    public const ERROR = 'E';
 
-    public static function ToString(string $Command)
+    public static function ToString(string $Command): string
     {
         switch ($Command) {
             case self::VERSION:
@@ -138,27 +138,27 @@ class DeviceCommand
                 return 'ALIAS_NAME';
             case self::ERROR:
                 return 'ERROR';
-           default:
-               return 'unknown command';
+            default:
+                return 'unknown command';
         }
     }
 }
 
 class DeviceError
 {
-    const DEVICE_BUSY = 'bz';
-    const DEVICE_NOT_EXISTS = 'np';
-    const POSITION_LIMIT_OCCURRED = 'nc';
-    const HALL_SENSOR_ERROR_M = 'mh';
-    const HALL_SENSOR_ERROR_S = 'sh';
-    const OPEN_OBSTACLE_RECOGNIZED = 'or';
-    const CLOSE_OBSTACLE_RECOGNIZED = 'cr';
-    const POWER_TO_LOW = 'pl';
-    const POWER_TO_HIGH = 'ph';
-    const DEVICE_OFFLINE = 'nl';
-    const UNDEFINED_ERROR = 'ec';
+    public const DEVICE_BUSY = 'bz';
+    public const DEVICE_NOT_EXISTS = 'np';
+    public const POSITION_LIMIT_OCCURRED = 'nc';
+    public const HALL_SENSOR_ERROR_M = 'mh';
+    public const HALL_SENSOR_ERROR_S = 'sh';
+    public const OPEN_OBSTACLE_RECOGNIZED = 'or';
+    public const CLOSE_OBSTACLE_RECOGNIZED = 'cr';
+    public const POWER_TO_LOW = 'pl';
+    public const POWER_TO_HIGH = 'ph';
+    public const DEVICE_OFFLINE = 'nl';
+    public const UNDEFINED_ERROR = 'ec';
 
-    public static function ToString(string $Error)
+    public static function ToString(string $Error): string
     {
         switch ($Error) {
             case self::DEVICE_BUSY:
@@ -193,29 +193,29 @@ class DeviceFrame
      *
      * @var string
      */
-    public $Command;
+    public string $Command;
 
     /**
      * DeviceAddress als String
      * @var string
      */
-    public $Address;
+    public string $Address;
 
     /**
      * Payload als string.
      *
      * @var string
      */
-    public $Data;
+    public string $Data;
 
     /**
      * Flag ob auf Antwort gewartet werden muss.
      *
      * @var bool
      */
-    public $needResponse;
+    public bool $needResponse;
 
-    public function __construct($Command, $Address = '', $Data = '', $needResponse = true)
+    public function __construct(string $Command, string $Address = '', string $Data = '', bool $needResponse = true)
     {
         if (strlen($Command) == 1) {
             $this->Command = $Command;
@@ -229,15 +229,15 @@ class DeviceFrame
             $this->needResponse = false;
         }
     }
-    public function ToJSONStringForSplitter()
+    public function ToJSONStringForSplitter(): string
     {
         return $this->ToJSON('{5138E7A2-ECEE-ED0E-2DFF-759D556AD9CB}');
     }
-    public function ToJSONStringForDevice()
+    public function ToJSONStringForDevice(): string
     {
         return $this->ToJSON('{656600E1-FC88-50CD-EBEC-6B8A9BA157FA}');
     }
-    public function EncodeFrame()
+    public function EncodeFrame(): string
     {
         //Frame  bauen.
         $Frame = $this->Address;
@@ -246,7 +246,7 @@ class DeviceFrame
         return $Frame;
     }
 
-    private function ToJSON(string $GUID)
+    private function ToJSON(string $GUID): string
     {
         $SendData = new \stdClass();
         $SendData->DataID = $GUID;
@@ -259,15 +259,16 @@ class DeviceFrame
 }
 trait ErrorHandler
 {
-    protected function ModulErrorHandler($errno, $errstr)
+    protected function ModulErrorHandler(int $errno, string $errstr): bool
     {
-        $this->SendDebug('ERROR', utf8_decode($errstr), 0);
+        $this->SendDebug('ERROR', $errstr, 0);
         echo $errstr . "\r\n";
+        return true;
     }
 }
 trait DebugHelper
 {
-    protected function SendDebug($Message, $Data, $Format)
+    protected function SendDebug(string $Message, mixed $Data, int $Format): bool
     {
         if (is_a($Data, '\\SIRO\\BridgeFrame')) {
             /* @var $Data \SIRO\BridgeFrame */

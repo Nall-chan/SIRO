@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @author        Michael Tröger <micha@nall-chan.net>
  * @copyright     2020 Michael Tröger
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
- * @version       0.01
+ * @version       1.11
  */
 require_once __DIR__ . '/../libs/SIROClass.php';  // diverse Klassen
 eval('declare(strict_types=1);namespace SIROConfigurator {?>' . file_get_contents(__DIR__ . '/../libs/helper/BufferHelper.php') . '}');
@@ -21,12 +21,12 @@ eval('declare(strict_types=1);namespace SIROConfigurator {?>' . file_get_content
  * @property array $Devices
  * @property bool $SearchFinished
  */
-class SIROConfigurator extends IPSModule
+class SIROConfigurator extends IPSModuleStrict
 {
     use \SIRO\DebugHelper;
     use \SIROConfigurator\BufferHelper;
 
-    public function Create()
+    public function Create(): void
     {
         parent::Create();
         $this->Devices = [];
@@ -34,21 +34,23 @@ class SIROConfigurator extends IPSModule
         $this->ConnectParent('{BC63861A-BEA5-9F77-FC6D-977665E8D839}');
     }
 
-    public function Destroy()
+    public function Destroy(): void
     {
         parent::Destroy();
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         parent::ApplyChanges();
         $this->SetReceiveDataFilter('.*"DeviceCommand":"' . \SIRO\DeviceCommand::VERSION . '".*');
     }
 
-    public function GetConfigurationForm()
+    public function GetConfigurationForm(): string
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
-        $NodeValues = [];
+        if ($this->GetStatus() == IS_CREATING) {
+            return json_encode($Form);
+        }
         if (!$this->HasActiveParent()) {
             $Form['actions'][1]['visible'] = true;
             $Form['actions'][1]['popup']['items'][0]['caption'] = 'Instance has no active parent.';
@@ -61,7 +63,7 @@ class SIROConfigurator extends IPSModule
         return json_encode($Form);
     }
 
-    public function ReceiveData($JSONString)
+    public function ReceiveData(string $JSONString): string
     {
         $Data = json_decode($JSONString);
         $DeviceFrame = new \SIRO\DeviceFrame(
@@ -71,21 +73,22 @@ class SIROConfigurator extends IPSModule
         );
         if ($this->SearchFinished) {
             $this->SendDebug('Ignore', $DeviceFrame, 0);
-            return;
+            return '';
         }
         $this->SendDebug('Event', $DeviceFrame, 0);
         if ($DeviceFrame->Address == 'FFF') {
             $this->SearchFinished = true;
-            return;
+            return '';
         }
         $Devices = $this->Devices;
         $Devices[] = [
             'Address'=> $DeviceFrame->Address
         ];
         $this->Devices = $Devices;
+        return '';
     }
 
-    private function GetDevicesConfigValues()
+    private function GetDevicesConfigValues(): array
     {
         $FoundDevices = $this->GetDevicesFromBridge();
         $this->GetNamesFromBridge($FoundDevices);
@@ -100,7 +103,6 @@ class SIROConfigurator extends IPSModule
             }
         }
         $this->SendDebug('Known Instances', $InstanceIDList, 0);
-        $Values = [];
         foreach ($FoundDevices as &$Device) {
             $InstanceIDDevice = array_search($Device['Address'], $InstanceIDList);
             if ($InstanceIDDevice !== false) {
@@ -129,7 +131,7 @@ class SIROConfigurator extends IPSModule
         }
         return $FoundDevices;
     }
-    private function GetInstanceList(string $GUID, int $Parent, string $ConfigParam)
+    private function GetInstanceList(string $GUID, int $Parent, string $ConfigParam): array
     {
         $InstanceIDList = [];
         foreach (IPS_GetInstanceListByModuleID($GUID) as $InstanceID) {
@@ -144,7 +146,7 @@ class SIROConfigurator extends IPSModule
         }
         return $InstanceIDList;
     }
-    private function GetDevicesFromBridge()
+    private function GetDevicesFromBridge(): array
     {
         $this->SearchFinished = false;
         $DeviceFrame = new \SIRO\DeviceFrame(\SIRO\DeviceCommand::VERSION, '000', \SIRO\DeviceCommand::QUERY, false);
@@ -158,18 +160,15 @@ class SIROConfigurator extends IPSModule
             return $Devices;
         }
         /**  @var \SIRO\DeviceFrame $ResultFrame	*/
-        //$ResultFrame = unserialize($Result);
-        //$this->SendDebug('Response', $ResultFrame, 0);
         if (!$this->WaitForFinish()) {
             $this->SearchFinished = true;
             return $Devices;
         }
         $Devices = $this->Devices;
-        //array_unshift($Devices, ['Address'=>$ResultFrame->Address]);
         return $Devices;
     }
 
-    private function GetNamesFromBridge(array &$Devices)
+    private function GetNamesFromBridge(array &$Devices): void
     {
         foreach ($Devices as &$Device) {
             $DeviceFrame = new \SIRO\DeviceFrame(\SIRO\DeviceCommand::ALIAS_NAME, $Device['Address'], \SIRO\DeviceCommand::QUERY);
@@ -192,7 +191,7 @@ class SIROConfigurator extends IPSModule
      * Wartet auf den Abschluss der Suche.
      *
      */
-    private function WaitForFinish()
+    private function WaitForFinish(): bool
     {
         for ($i = 0; $i < 5000; $i++) {
             if ($this->SearchFinished) {

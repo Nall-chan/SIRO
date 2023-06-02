@@ -25,4 +25,4 @@ class LibraryTest extends TestCaseSymconValidation
     {
         $this->validateModule(__DIR__ . '/../SIRO Configurator');
     }
-}  
+}

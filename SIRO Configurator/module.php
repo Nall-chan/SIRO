@@ -177,8 +177,8 @@ class SIROConfigurator extends IPSModule
             $this->SendDebug('Send', $DeviceFrame, 0);
             $Result = @$this->SendDataToParent($DeviceFrame->ToJSONStringForSplitter());
             if ($Result === false) {
-				$this->SendDebug('Timeout', '', 0);
-				$Device['Name']='';
+                $this->SendDebug('Timeout', '', 0);
+                $Device['Name'] = '';
                 continue;
             }
             /**  @var \SIRO\DeviceFrame $ResultFrame	*/

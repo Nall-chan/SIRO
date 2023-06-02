@@ -253,7 +253,7 @@ class DeviceFrame
         $SendData->DeviceCommand = $this->Command;
         $SendData->DeviceAddress = $this->Address;
         $SendData->Data = $this->Data;
-        $SendData->needResponse=$this->needResponse;
+        $SendData->needResponse = $this->needResponse;
         return json_encode($SendData);
     }
 }

@@ -47,7 +47,7 @@ class SIROSplitter extends IPSModule
         $this->ReceiveBuffer = '';
         $this->WaitForBridgeResponse = false;
         $this->BridgeAddress = '000';
-        $this->ReplyDeviceFrames=[];
+        $this->ReplyDeviceFrames = [];
         $this->RequireParent('{6DC3D946-0D31-450F-A8C6-C42DB8D7D4F1}');
         if (IPS_GetKernelRunlevel() != KR_READY) {
             $this->RegisterMessage(0, IPS_KERNELSTARTED);
@@ -65,7 +65,7 @@ class SIROSplitter extends IPSModule
         $this->ReceiveBuffer = '';
         $this->WaitForBridgeResponse = false;
         $this->BridgeAddress = '000';
-        $this->ReplyDeviceFrames=[];
+        $this->ReplyDeviceFrames = [];
         $this->SetSummary('000');
         $this->RegisterMessage($this->InstanceID, FM_CONNECT);
         $this->RegisterMessage($this->InstanceID, FM_DISCONNECT);
@@ -312,7 +312,7 @@ class SIROSplitter extends IPSModule
         $this->unlock('ReplyDeviceFrames');
         return true;
     }
-    
+
     /**
      * Fügt eine Antwort in die SendQueue ein.
      *

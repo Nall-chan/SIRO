@@ -16,17 +16,17 @@ require_once __DIR__ . '/../libs/SIROClass.php';  // diverse Klassen
 eval('declare(strict_types=1);namespace SIRORollerblind {?>' . file_get_contents(__DIR__ . '/../libs/helper/VariableProfileHelper.php') . '}');
 eval('declare(strict_types=1);namespace SIRORollerblind {?>' . file_get_contents(__DIR__ . '/../libs/helper/VariableHelper.php') . '}');
 
+/**
+ * @method void RegisterProfileInteger(string $Name, string $Icon, string $Prefix, string $Suffix, int $MinValue, int $MaxValue, int $StepSize)
+ * @method void SetValueInteger(string $Ident, int $value)
+ * @method void SetValueFloat(string $Ident, float $value)
+ */
 class SIRORollerblind extends IPSModule
 {
     use \SIRO\DebugHelper;
     use \SIRO\ErrorHandler;
     use \SIRORollerblind\VariableProfileHelper;
     use \SIRORollerblind\VariableHelper;
-    //\SIRORollerblind\InstanceStatus,
-    //\SIRORollerblind\BufferHelper {
-    //\SIRORollerblind\InstanceStatus::MessageSink as IOMessageSink;
-//    \SIRORollerblind\InstanceStatus::RegisterParent as IORegisterParent;
-    //\SIRORollerblind\InstanceStatus::RequestAction as IORequestAction;
 
     public function Create()
     {
@@ -53,6 +53,7 @@ class SIRORollerblind extends IPSModule
         $this->EnableAction('LEVEL');
         $this->RegisterVariableInteger('TILT', $this->Translate('Tilt'), 'SIRO.Tilt', 3);
         $this->EnableAction('TILT');
+        $this->RegisterVariableFloat('POWER', $this->Translate('Voltage'), '~Volt', 4);
         $Address = $this->ReadPropertyString('Address');
         $this->SetSummary($Address);
         if ($Address == '000') {
@@ -72,7 +73,8 @@ class SIRORollerblind extends IPSModule
             $this->RequestState();
         }
     }
-    public function RequestState()
+
+    public function RequestState(): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::REPORT_STATE, \SIRO\DeviceCommand::QUERY);
         if ($ResultData != null) {
@@ -81,7 +83,8 @@ class SIRORollerblind extends IPSModule
         }
         return false;
     }
-    public function Open()
+
+    public function Open(): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::OPEN);
         if ($ResultData == null) {
@@ -90,7 +93,8 @@ class SIRORollerblind extends IPSModule
         $this->SetValueInteger('CONTROL', 0);
         return true;
     }
-    public function Close()
+
+    public function Close(): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::CLOSE);
         if ($ResultData == null) {
@@ -99,7 +103,8 @@ class SIRORollerblind extends IPSModule
         $this->SetValueInteger('CONTROL', 4);
         return true;
     }
-    public function Stop()
+
+    public function Stop(): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::STOP);
         if ($ResultData == null) {
@@ -108,7 +113,8 @@ class SIRORollerblind extends IPSModule
         $this->SetValueInteger('CONTROL', 2);
         return true;
     }
-    public function Move(int $Value)
+
+    public function Move(int $Value): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::LIFT, sprintf('%03d', $Value));
         if ($ResultData == null) {
@@ -117,7 +123,8 @@ class SIRORollerblind extends IPSModule
         $this->SetValueInteger('LEVEL', (int) $ResultData->Data);
         return true;
     }
-    public function Tilt(int $Value)
+
+    public function Tilt(int $Value): bool
     {
         $ResultData = $this->SendData(\SIRO\DeviceCommand::TILT, sprintf('%03d', $Value));
         if ($ResultData == null) {
@@ -126,7 +133,8 @@ class SIRORollerblind extends IPSModule
         $this->SetValueInteger('TILT', (int) $ResultData->Data);
         return true;
     }
-    public function MoveTilt(int $Level, int $Tilt)
+
+    public function MoveTilt(int $Level, int $Tilt): bool
     {
         $ResultData = $this->SendData(
             \SIRO\DeviceCommand::LIFT,
@@ -142,6 +150,9 @@ class SIRORollerblind extends IPSModule
         $this->DecodeEvent($ResultData);
         return true;
     }
+    /**
+     * @param mixed $Value
+     */
     public function RequestAction($Ident, $Value)
     {
         switch ($Ident) {
@@ -213,15 +224,26 @@ class SIRORollerblind extends IPSModule
 
     private function DecodeEvent(\SIRO\DeviceFrame $DeviceFrame)
     {
-        if ($DeviceFrame->Command != \SIRO\DeviceCommand::REPORT_STATE) {
-            set_error_handler([$this, 'ModulErrorHandler']);
-            trigger_error('Wrong event received.', E_USER_NOTICE);
-            restore_error_handler();
+        switch ($DeviceFrame->Command) {
+            case \SIRO\DeviceCommand::REPORT_STATE:
+                $Part = explode('b', $DeviceFrame->Data);
+                $Level = (int) $Part[0];
+                $Tilt = (int) $Part[1];
+                $this->SetValueInteger('LEVEL', $Level);
+                $this->SetValueInteger('TILT', $Tilt);
+                $this->RequestPowerState();
+                break;
         }
-        $Part = explode('b', $DeviceFrame->Data);
-        $Level = (int) $Part[0];
-        $Tilt = (int) $Part[1];
-        $this->SetValueInteger('LEVEL', $Level);
-        $this->SetValueInteger('TILT', $Tilt);
+    }
+
+    private function RequestPowerState()
+    {
+        $ResultData = $this->SendData(\SIRO\DeviceCommand::POWER, 'Vc'.\SIRO\DeviceCommand::QUERY);
+        if ($ResultData == null) {
+            return false;
+        }
+        $this->SetValueFloat('POWER', ((int) substr($ResultData->Data,2)/100));
+        return true;
+
     }
 }

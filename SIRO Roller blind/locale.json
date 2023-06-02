@@ -8,6 +8,7 @@
             "Control": "Steuerung",
             "Level": "Höhe",
             "Tilt": "Neigung",
+            "Voltage":"Spannung",
             "Invalid value": "Ungültiger Wert",
             "Invalid ident": "Ungültiger Ident",
             "Wrong event received.": "Falsches Ereignis empfangen.",

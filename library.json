@@ -4,9 +4,9 @@
     "author": "Michael Tröger",
     "url": "https://github.com/Nall-chan/SIRO",
     "compatibility": {
-        "version": "5.4"
+        "version": "6.1"
     },
-    "version": "0.1",
-    "build": 1,
-    "date": 1596983123
+    "version": "1.0",
+    "build": 100,
+    "date": 1685707732
 }

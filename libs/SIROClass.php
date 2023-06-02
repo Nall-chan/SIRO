@@ -107,7 +107,7 @@ class DeviceCommand
     const THIRD_POSITION = 'f';
     const QUERY = '?';
     const REPORT_STATE = 'r';
-    const POWER = 'P';
+    const POWER = 'p';
     const ALIAS_NAME = 'N';
     const ERROR = 'E';
 

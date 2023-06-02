@@ -238,12 +238,11 @@ class SIRORollerblind extends IPSModule
 
     private function RequestPowerState()
     {
-        $ResultData = $this->SendData(\SIRO\DeviceCommand::POWER, 'Vc'.\SIRO\DeviceCommand::QUERY);
+        $ResultData = $this->SendData(\SIRO\DeviceCommand::POWER, 'Vc' . \SIRO\DeviceCommand::QUERY);
         if ($ResultData == null) {
             return false;
         }
-        $this->SetValueFloat('POWER', ((int) substr($ResultData->Data,2)/100));
+        $this->SetValueFloat('POWER', ((int) substr($ResultData->Data, 2) / 100));
         return true;
-
     }
 }

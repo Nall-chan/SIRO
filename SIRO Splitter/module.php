@@ -29,11 +29,11 @@ eval('declare(strict_types=1);namespace SIROSplitter {?>' . file_get_contents(__
  * @property \SIRO\BridgeFrame $ResponseFrame
  * @property bool $WaitForBridgeResponse
  * @property int $ParentID Aktueller IO-Parent.
- * 
+ *
  * @method bool lock(string $ident)
  * @method void unlock(string $ident)
  * @method int RegisterParent()
-
+ *
  */
 class SIROSplitter extends IPSModule
 {

@@ -317,7 +317,7 @@ class SIROSplitter extends IPSModuleStrict
             $this->unlock('ReplyDeviceFrames');
             return false;
         }
-        $data[$DeviceFrame->Address] = null;
+        $DeviceFrames[$DeviceFrame->Address] = null;
         $this->ReplyDeviceFrames = $DeviceFrames;
         $this->unlock('ReplyDeviceFrames');
         return true;

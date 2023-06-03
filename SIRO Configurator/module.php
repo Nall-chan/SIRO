@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @author        Michael Tröger <micha@nall-chan.net>
  * @copyright     2020 Michael Tröger
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
- * @version       0.01
+ * @version       1.00
  */
 require_once __DIR__ . '/../libs/SIROClass.php';  // diverse Klassen
 eval('declare(strict_types=1);namespace SIROConfigurator {?>' . file_get_contents(__DIR__ . '/../libs/helper/BufferHelper.php') . '}');
@@ -48,7 +48,9 @@ class SIROConfigurator extends IPSModule
     public function GetConfigurationForm()
     {
         $Form = json_decode(file_get_contents(__DIR__ . '/form.json'), true);
-        $NodeValues = [];
+        if ($this->GetStatus() == IS_CREATING) {
+            return json_encode($Form);
+        }
         if (!$this->HasActiveParent()) {
             $Form['actions'][1]['visible'] = true;
             $Form['actions'][1]['popup']['items'][0]['caption'] = 'Instance has no active parent.';
@@ -71,18 +73,19 @@ class SIROConfigurator extends IPSModule
         );
         if ($this->SearchFinished) {
             $this->SendDebug('Ignore', $DeviceFrame, 0);
-            return;
+            return '';
         }
         $this->SendDebug('Event', $DeviceFrame, 0);
         if ($DeviceFrame->Address == 'FFF') {
             $this->SearchFinished = true;
-            return;
+            return '';
         }
         $Devices = $this->Devices;
         $Devices[] = [
             'Address'=> $DeviceFrame->Address
         ];
         $this->Devices = $Devices;
+        return '';
     }
 
     private function GetDevicesConfigValues()
@@ -100,7 +103,6 @@ class SIROConfigurator extends IPSModule
             }
         }
         $this->SendDebug('Known Instances', $InstanceIDList, 0);
-        $Values = [];
         foreach ($FoundDevices as &$Device) {
             $InstanceIDDevice = array_search($Device['Address'], $InstanceIDList);
             if ($InstanceIDDevice !== false) {
@@ -158,14 +160,11 @@ class SIROConfigurator extends IPSModule
             return $Devices;
         }
         /**  @var \SIRO\DeviceFrame $ResultFrame	*/
-        //$ResultFrame = unserialize($Result);
-        //$this->SendDebug('Response', $ResultFrame, 0);
         if (!$this->WaitForFinish()) {
             $this->SearchFinished = true;
             return $Devices;
         }
         $Devices = $this->Devices;
-        //array_unshift($Devices, ['Address'=>$ResultFrame->Address]);
         return $Devices;
     }
 

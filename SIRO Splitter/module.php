@@ -10,7 +10,7 @@ declare(strict_types=1);
  * @author        Michael Tröger <micha@nall-chan.net>
  * @copyright     2020 Michael Tröger
  * @license       https://creativecommons.org/licenses/by-nc-sa/4.0/ CC BY-NC-SA 4.0
- * @version       0.01
+ * @version       1.00
  */
 require_once __DIR__ . '/../libs/SIROClass.php';  // diverse Klassen
 
@@ -21,7 +21,6 @@ eval('declare(strict_types=1);namespace SIROSplitter {?>' . file_get_contents(__
 
 /**
  * SIROSplitter ist die Klasse für die SIRO Rollos
- * Erweitert ipsmodule.
  *
  * @property string $ReceiveBuffer Receive Buffer.
  * @property array $ReplyDeviceFrames Enthält die versendeten DeviceFrame und speichert die Antworten.
@@ -43,9 +42,9 @@ class SIROSplitter extends IPSModule
     use \SIROSplitter\VariableHelper;
     use \SIROSplitter\InstanceStatus;
     use \SIROSplitter\BufferHelper {
-    \SIROSplitter\InstanceStatus::MessageSink as IOMessageSink;
-    \SIROSplitter\InstanceStatus::RequestAction as IORequestAction;
-}
+        \SIROSplitter\InstanceStatus::MessageSink as IOMessageSink;
+        \SIROSplitter\InstanceStatus::RequestAction as IORequestAction;
+    }
     public function Create()
     {
         parent::Create();
@@ -113,9 +112,8 @@ class SIROSplitter extends IPSModule
     public function RequestAction($Ident, $Value)
     {
         if ($this->IORequestAction($Ident, $Value)) {
-            return true;
+            return;
         }
-        return false;
     }
     public function GetConfigurationForParent()
     {
@@ -140,13 +138,19 @@ class SIROSplitter extends IPSModule
             $Data->needResponse
         );
         if ($Data->needResponse) {
-            $this->SendQueuePush($DeviceFrame);
-            $SendOk = $this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame());
+            if (!$this->SendQueuePush($DeviceFrame)) {
+                trigger_error($this->Translate('Send to device is blocked'), E_USER_NOTICE);
+                return '';
+            }
+            if ($this->SendData(\SIRO\BridgeCommand::DEVICE, $DeviceFrame->EncodeFrame()) !== true) {
+                trigger_error($this->Translate('Send to device is blocked'), E_USER_NOTICE);
+                return '';
+            }
             $ResultData = $this->WaitForResponse($DeviceFrame);
-            $this->SendDebug('Result Forward Device', $ResultData, 0);
-            if ($ResultData === false) {
+            $this->SendDebug('Answer for device', $ResultData, 0);
+            if (is_null($ResultData)) {
                 trigger_error($this->Translate('No answer from Device'), E_USER_NOTICE);
-                return false;
+                return '';
             }
             return serialize($ResultData);
         } else {
@@ -164,7 +168,7 @@ class SIROSplitter extends IPSModule
         if ($Start === false) {
             $this->SendDebug('ERROR', 'Start Marker not found', 0);
             $this->ReceiveBuffer = '';
-            return false;
+            return '';
         }
         if ($Start != 0) {
             $this->SendDebug('WARNING', 'Start is ' . $Start . ' and not 0', 0);
@@ -198,6 +202,7 @@ class SIROSplitter extends IPSModule
                 }
             }
         }
+        return '';
     }
     /**
      * Wird ausgeführt wenn der Kernel hochgefahren wurde.
@@ -307,13 +312,13 @@ class SIROSplitter extends IPSModule
             //throw new Exception($this->Translate('ReplyDeviceFrames is locked'), E_USER_NOTICE);
             return false;
         }
-        $data = $this->ReplyDeviceFrames;
-        if (array_key_exists($DeviceFrame->Address, $data)) {
+        $DeviceFrames = $this->ReplyDeviceFrames;
+        if (array_key_exists($DeviceFrame->Address, $DeviceFrames)) {
             $this->unlock('ReplyDeviceFrames');
             return false;
         }
-        $data[$DeviceFrame->Address] = null;
-        $this->ReplyDeviceFrames = $data;
+        $DeviceFrames[$DeviceFrame->Address] = null;
+        $this->ReplyDeviceFrames = $DeviceFrames;
         $this->unlock('ReplyDeviceFrames');
         return true;
     }
@@ -332,10 +337,10 @@ class SIROSplitter extends IPSModule
             return false;
         }
         $key = $DeviceFrame->Address;
-        $data = $this->ReplyDeviceFrames;
-        if (array_key_exists($key, $data)) {
-            $data[$key] = $DeviceFrame;
-            $this->ReplyDeviceFrames = $data;
+        $DeviceFrames = $this->ReplyDeviceFrames;
+        if (array_key_exists($key, $DeviceFrames)) {
+            $DeviceFrames[$key] = $DeviceFrame;
+            $this->ReplyDeviceFrames = $DeviceFrames;
             $this->unlock('ReplyDeviceFrames');
             return true;
         }
@@ -352,18 +357,18 @@ class SIROSplitter extends IPSModule
     {
         $SearchPatter = $DeviceFrame->Address;
         for ($i = 0; $i < 1000; $i++) {
-            $Buffer = $this->ReplyDeviceFrames;
-            if (!array_key_exists($SearchPatter, $Buffer)) {
-                return false;
+            $DeviceFrames = $this->ReplyDeviceFrames;
+            if (!array_key_exists($SearchPatter, $DeviceFrames)) {
+                return null;
             }
-            if ($Buffer[$SearchPatter] !== null) {
+            if ($DeviceFrames[$SearchPatter] !== null) {
                 $this->SendQueueRemove($SearchPatter);
-                return $Buffer[$SearchPatter];
+                return $DeviceFrames[$SearchPatter];
             }
             IPS_Sleep(5);
         }
         $this->SendQueueRemove($SearchPatter);
-        return false;
+        return null;
     }
     /**
      * Löscht einen Eintrag aus der SendQueue.
@@ -391,7 +396,8 @@ class SIROSplitter extends IPSModule
             }
             $Data = $SiroFrame->ToJSONStringForIO();
             if ($Command == \SIRO\BridgeCommand::DEVICE) {
-                return parent::SendDataToParent($Data);
+                parent::SendDataToParent($Data);
+                return true;
             }
             if (!$this->lock('SendAPIData')) {
                 throw new Exception($this->Translate('Send is blocked for'), E_USER_ERROR);
@@ -399,13 +405,12 @@ class SIROSplitter extends IPSModule
             $this->ResponseFrame = null;
             $this->WaitForBridgeResponse = true;
             parent::SendDataToParent($Data);
-            $ResponseFrame = $this->ReadResponseFrame();
-            if ($ResponseFrame === null) {
+            $Result = $this->ReadResponseFrame();
+            if ($Result === null) {
                 throw new Exception($this->Translate('Timeout'), E_USER_NOTICE);
             }
-            $this->SendDebug('Response', $ResponseFrame, 0);
+            $this->SendDebug('Response', $Result, 0);
             $this->unlock('SendAPIData');
-            $Result = $ResponseFrame;
         } catch (Exception $exc) {
             if ($exc->getCode() != E_USER_ERROR) {
                 $this->unlock('SendAPIData');
